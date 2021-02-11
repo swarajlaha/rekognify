@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+        div.gallery {
+            margin: 5px;
+            border: 1px solid #ccc;
+            float: left;
+            width: 200px;
+        }
+        div.gallery:hover {
+            border: 1px solid #777;
+        }
+        div.gallery img {
+            width: 100%;
+            height: auto;
+        }
+        div.desc {
+            padding: 10px;
+            text-align: center;
+            font-size:12px
+        }
+        div.source img {
+            width: 250px;
+            height: auto;
+        }
+    </style>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+    <script src="https://sdk.amazonaws.com/js/aws-sdk-2.85.0.min.js"></script>
+    <script>
+    $(document).ready(function(){
+        AWS.config.region = 'us-east-1';
+        AWS.config.credentials = new AWS.CognitoIdentityCredentials({
+            IdentityPoolId: 'xxxxxxxx:dd93fbdd-2afb-4802-89eb-xxxxxxxx',
+        });
+        var s3 = new AWS.S3({
+            apiVersion: '2006-03-01',
+            params: {Bucket: '<BUCKET-NAME>'}
+        });
+        $('#addphoto').click(function(event) {
+            var files = $('#photoupload').prop('files');
+            if (!files.length) {
+               return alert('Please choose a file to upload!');
+            }
+            var file = files[0];
+            s3.upload({
+                    Key: file.name,
+                    Body: file,
+                    ACL: 'public-read'
+                }, function(err, data) {
+                    if (err) {
+                        return alert('Error uploading photo: ', err);
+                    } else {
+                        //successfully uploaded photo
+                        var apiinvokeurl = 'https://xxxxxxxx.amazonaws.com/dev';
+                        var url =  apiinvokeurl + '?filename=' + file.name;
+                        $.get(url, function(data){
+                            $('#album-list').empty();
+                            var imageurl = 'https://s3.amazonaws.com/<BUCKET-NAME>/' + data;
+                            var htmlelements = [
+                                '<div class="gallery">',
+                                '<a target="_blank" href="' + imageurl + '"><img src="' + imageurl +'"/></a>',
+                                '</div>'
+                            ]
+                            var img = gethtml(htmlelements);
+                            $(img).appendTo('#album-list');
+                        });
+                    }
+            });
+        });
+       function gethtml(elements) {
+          return elements.join('\n');
+       }
+       $('#photoupload').on("change", function(e){
+           $('#output').attr('src',URL.createObjectURL(e.target.files[0]));
+           $('#album-list').empty();
+        });
+    });
+  </script>
+  </head>
+  <body>
+    <h1>Targeted Ad based on Facial, Demographic & Sentiment analysis</h1>
+    <p>Try uploading pic of:
+        <ul>
+            <li>An angry person - Should fetch an ad of a Yoga DVD</li>
+            <li>A bearded man - Should fetch an ad of a beard oil or a razor</li>
+            <li>A clean shaved man - Should fetch an ad of a razor</li>
+            <li>A lady or woman - Should fetch an ad of a lipstick</li>
+            <li>A kid - Should fetch an ad of a playstation</li>
+        </ul>
+    </p>
+    <div>
+        <input id="photoupload" type="file" accept="image/*">
+        <button id="addphoto">Fetch Advertisement</button>
+        <br/><br/>
+        <div class="source"><img id="output"/></div>
+    </div>
+    <hr/>
+    <br/>
+    <div id="album-list">
+    </div>
+  </body>
+</html>
